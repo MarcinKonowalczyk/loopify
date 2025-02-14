@@ -56,12 +56,17 @@
       function success(buffer) {
 
         var source;
+        var future_id; // id of the timeout for the next play
 
         function canPlay() {
           return can_play;
         }
 
-        function play() {
+        function play(fade_time) {
+        
+          if (fade_time === undefined) {
+            fade_time = 0.0;
+          }
 
           // We cannot play yet, but maybe this was triggered by our first
           // interaction with the page, and we will be able to play soon.
@@ -77,16 +82,45 @@
           // Stop if it's already playing
           stop();
 
-          // Create a new source (can't replay an existing source)
-          source = context.createBufferSource();
-          source.connect(context.destination);
+          // Called at the start of the new segment, 'fade_time' before
+          // the end of the previous one
+          function playSegment(prev_gain) {
+            var now = context.currentTime;
 
-          // Set the buffer
-          source.buffer = buffer;
-          source.loop = true;
+            // Create a new source (can't replay an existing source)
+            source = context.createBufferSource();
+            var gain = context.createGain();
+            source.connect(gain).connect(context.destination);
+            source.buffer = buffer;
 
-          // Play it
-          source.start(0);
+            // Fade in this segment
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(1, now + fade_time);
+
+            // Crossfade with previous segment if it exists
+            if (prev_gain !== undefined) {
+              prev_gain.gain.linearRampToValueAtTime(0, now + fade_time);
+            }
+
+            // start source
+            source.start(now);
+
+            return gain;
+          }
+        
+          // Play segment and recursively schedule the next one
+          function recursivePlay(prev_gain) {
+            // Play the current segment
+            var gain = playSegment(prev_gain);
+            
+            // Schedule ourselves to play the next segment
+            future_id = setTimeout(() => {
+              recursivePlay(gain);
+            }, (buffer.duration - fade_time) * 1000);
+            console.log("schedule done");
+          }
+
+          recursivePlay();
 
         }
 
@@ -98,6 +132,12 @@
           if (source) {
             source.stop();
             source = null;
+          }
+
+          // Clear any future play timeouts
+          if (future_id) {
+            clearTimeout(future_id);
+            future_id = null;
           }
 
         }
