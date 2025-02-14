@@ -117,7 +117,6 @@
             future_id = setTimeout(() => {
               recursivePlay(gain);
             }, (buffer.duration - fade_time) * 1000);
-            console.log("schedule done");
           }
 
           recursivePlay();
