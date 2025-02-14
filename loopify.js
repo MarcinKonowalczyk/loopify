@@ -19,7 +19,6 @@
 
       function resume() {
         timeout(context.resume(), resume_timeout).then(() => {
-
             // Context is resumed! We can play audio now.
             can_play = true;
 
@@ -33,7 +32,12 @@
         }, resume);
       }
 
-      resume();
+      if (context.state === "running") {
+        // no need to resume, we can play
+        can_play = true;
+      } else {
+        resume();
+      }
 
       request.responseType = "arraybuffer";
       request.open("GET", uri, true);
