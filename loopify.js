@@ -11,7 +11,7 @@
       // Try to resume it every 100ms, only once successful we can play
       var can_play = false;
       var want_to_play = false; // if we want to play but can't yet
-      var resume_timeout = 100;
+      var resume_timeout = 100; // milliseconds
 
       const timeout = (prom, time) => {
         return Promise.race([prom, new Promise((_r, rej) => setTimeout(rej, time))])
@@ -25,15 +25,13 @@
             // I we want to play, do it now
             if (want_to_play) {
               want_to_play = false;
-              if (obj !== undefined) {
-                obj.play();
-              }
+              if (obj !== undefined) obj.play();
             }
         }, resume);
       }
 
       if (context.state === "running") {
-        // no need to resume, we can play
+        // no need to resume, we can play already
         can_play = true;
       } else {
         resume();
@@ -61,10 +59,6 @@
 
         var source;
         var future_id ; // id of the timeout for the next play
-
-        function canPlay() {
-          return can_play;
-        }
 
         function play(fade_time) {
         
