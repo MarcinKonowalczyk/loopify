@@ -2,12 +2,15 @@
 
     function loopify(uri,cb) {
 
-      var context = new (window.AudioContext || window.webkitAudioContext)(),
-          request = new XMLHttpRequest();
+      var context = new (window.AudioContext || window.webkitAudioContext)();
+      var request = new XMLHttpRequest();
+
+      var obj = undefined;
       
       // If we have not interacted with the page, we can't play audio
-      // Try to resume it every 100ms, only once su
+      // Try to resume it every 100ms, only once successful we can play
       var can_play = false;
+      var want_to_play = false; // if we want to play but can't yet
       var resume_timeout = 100;
 
       const timeout = (prom, time) => {
@@ -15,7 +18,19 @@
       };
 
       function resume() {
-        timeout(context.resume(), resume_timeout).then(() => {can_play = true}, resume);
+        timeout(context.resume(), resume_timeout).then(() => {
+
+            // Context is resumed! We can play audio now.
+            can_play = true;
+
+            // I we want to play, do it now
+            if (want_to_play) {
+              want_to_play = false;
+              if (obj !== undefined) {
+                obj.play();
+              }
+            }
+        }, resume);
       }
 
       resume();
@@ -48,10 +63,16 @@
 
         function play() {
 
-          // NOTE: we don't check for the 'can_play' flag here on purpose!!
-          // If the first time we interact with the page is, for example,
-          // pressing the play button, this would lead to a race condition
-          // and probably gobble up the first press of the button.
+          // We cannot play yet, but maybe this was triggered by our first
+          // interaction with the page, and we will be able to play soon.
+          // There is a race between call to play and the callback of the
+          // resume of the context. We just set a flag here, and return.
+          // The resume callback will check this flag and play if needed.
+          if (!can_play) {
+            // We can't play audio yet
+            want_to_play = true;
+            return;
+          }
 
           // Stop if it's already playing
           stop();
@@ -71,6 +92,8 @@
 
         function stop() {
 
+          want_to_play = false;
+
           // Stop and clear if it's playing
           if (source) {
             source.stop();
@@ -79,11 +102,13 @@
 
         }
 
-        cb(null,{
-          canPlay: canPlay,
+        // Return the object to the callback
+        obj = {
           play: play,
           stop: stop
-        });
+        }
+
+        cb(null, obj);
 
       }
 
