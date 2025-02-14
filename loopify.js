@@ -56,7 +56,7 @@
       function success(buffer) {
 
         var source;
-        var future_id; // id of the timeout for the next play
+        var future_id ; // id of the timeout for the next play
 
         function canPlay() {
           return can_play;
@@ -141,10 +141,15 @@
 
         }
 
+        function playing() {
+          return source !== undefined;
+        }
+
         // Return the object to the callback
         obj = {
           play: play,
-          stop: stop
+          stop: stop,
+          playing: playing,
         }
 
         cb(null, obj);
@@ -153,7 +158,7 @@
 
     }
 
-    loopify.version = "0.1";
+    loopify.version = "0.2";
 
     if (typeof define === "function" && define.amd) {
       define(function() { return loopify; });
